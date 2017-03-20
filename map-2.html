@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+	<link rel="icon" href="/favicon.ico" type="image/x-icon">
+
+</head>
+<style>
+
+div.tooltip {
+  position: absolute;
+  text-align: center;
+  width: 140px;
+  height: 70px;
+  padding: 2px;
+  font: 12px sans-serif;
+  background: lightsteelblue;
+  border: 0px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+</style>
+<body>
+
+	
+		<header>
+			<h1>Mapa referente ao  Consumo medio percapita de água por Dia</h1>
+		</header>
+
+		<div id="chart"></div>
+	<footer></footer>
+
+	<!-- scripts -->
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script src="https//d3js.org/d3-color.v1.min.js"></script>
+	<script src="https//d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  <script src="https://d3js.org/topojson.v1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.13.0/d3-legend.js"></script>
+  <script src="https://d3js.org/d3-zoom.v1.min.js"></script>
+	<script>
+		var
+		    width = 1000,
+		    height = 500;
+		    scale = 2000 * .989;
+		var legendRectSize = 36;                                  // NEW
+        var legendSpacing = 16;  
+
+	var color = d3.scaleOrdinal(d3.schemeCategory20c);
+
+		var svg = d3.select("#chart")
+				.append("svg")
+				.attr('version', '1.1')
+				.attr('viewBox', '0 0 '+width+' '+height)
+				.attr('width', '100%')
+				.attr('class', 'map-chart');
+		var transform = d3.zoomIdentity;
+		var projection = d3.geoAlbers()
+        		.center([-40.820037, -10.35])
+        		.rotate([0, 0])
+        		.parallels([0, 0])
+        		.scale(scale);
+
+
+    var path = d3.geoPath().projection(projection);
+    var populacaoScale = d3.scaleQuantize().domain([0,550]).range(d3.range(9).map(function(i) { return color(i); }));
+
+	d3.queue()
+		.defer(d3.json, "municipios_sab.json")
+		.defer(d3.csv, "data_consumo_completo.csv")
+		.await(draw);
+
+var div = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+
+    function draw(error, semi_arido, populacaoXdemanda) {
+      if (error) throw error;
+      var municipios = topojson.feature(semi_arido, semi_arido.objects.municipios_sab);
+
+      svg.selectAll(".municipios")
+        .data(municipios.features)
+      .enter().append("path")
+      
+        .attr("id", function(d) {return "Quantidade_Paralizacao-"+d.properties.ID; })
+        .call(d3.drag()
+        .on("drag", dragged))
+       .on("mouseover", function(d) {
+       div.transition()
+
+         .duration(200)
+         .style("opacity", .9)
+         for (var i = 0; i < populacaoXdemanda.length; i++) {
+         	if (d.properties.ID == populacaoXdemanda[i].GEOCODIGO ) {div.html( "Comsumo Medio  : "+ populacaoXdemanda[i].comsumo +"<br/>"  + "Municipio : " + populacaoXdemanda[i].MUNICIPIO  + "<br/>" + "UF : " + populacaoXdemanda[i].UF)
+         		         											.style("left", (d3.event.pageX) + "px")
+         															.style("top", (d3.event.pageY - 28) + "px");};
+			
+
+
+
+
+
+				};
+       })
+     .on("mouseout", function(d) {
+       div.transition()
+         .duration(500)
+         .style("opacity", 0);
+       })
+        .attr("d", path);
+        	for (var i = 0; i < populacaoXdemanda.length; i++) {
+				svg.select("#Quantidade_Paralizacao-"+populacaoXdemanda[i].GEOCODIGO)
+
+						.attr("fill", populacaoScale(+populacaoXdemanda[i].comsumo))
+
+
+
+				}
+				 
+
+
+
+
+
+svg.append("g")
+  .attr("class", "legendQuant")
+  .attr("transform", "translate(20,20)");
+
+var legend = d3.legendColor()
+  .labelFormat(d3.format(".2f"))
+  .title("Cosumo medio percapita de água")
+  .shapeWidth(20)
+  .scale(populacaoScale);
+
+svg.select(".legendQuant")
+  .call(legend);
+
+
+svg.call(d3.zoom()
+    .scaleExtent([1 / 4, 8])
+    .on("zoom", zoomed));
+function zoomed() {
+  svg.attr("transform", d3.event.transform);
+}
+function dragged(d) {
+  d3.select(this).attr("cx", d.x = d3.event.x).attr("cy", d.y = d3.event.y);
+}
+
+}
+
+
+
+
+
+
+	</script>
+
+</body>
+</html>
